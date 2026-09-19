@@ -1,5 +1,2 @@
 [phases.setup]
 nixPkgs = ["nodejs_20", "python3", "ffmpeg"]
-
-[phases.install]
-cmds = ["python3 -m pip install -U yt-dlp --break-system-packages", "npm ci"]
