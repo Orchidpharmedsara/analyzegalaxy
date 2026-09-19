@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Video {
+  id             String   @id @default(cuid())
+  sourceType     String   // 'upload' | 'instagram'
+  originalUrl    String?
+  filePath       String
+  thumbnailPath  String?
+  caption        String?
+  hashtags       String?
+  transcript     String?  // Extracted audio transcript
+  
+  // Video Metadata
+  duration       Float?
+  resolution     String?
+  fps            Float?
+  aspectRatio    String?
+  fileSize       Int?
+  
+  // Engagement Data
+  likeCount      Int?
+  commentCount   Int?
+  viewCount      Int?
+  authorUsername String?
+
+  createdAt      DateTime @default(now())
+  analysis       Analysis?
+}
+
+model Analysis {
+  id                     String   @id @default(cuid())
+  videoId                String   @unique
+  video                  Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  status                 String   @default("COMPLETE") // PENDING, COMPLETE, ERROR
+  overallScore           Int?
+  overallScoreExplanation String? // Explanation for the overall score
+  categoryScores         String?  // JSON string
+  videoSummary           String?  @default("")
+  whatWorked             String?
+  whyItCouldWorkOnSocial String?
+  narrativeCritique      String?
+  improvementSuggestions String?  // JSON string
+  createdAt              DateTime @default(now())
+  feedback               Feedback?
+}
+
+model Feedback {
+  id         String   @id @default(cuid())
+  analysisId String   @unique
+  analysis   Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  rating     Int      // 1-5 stars
+  correction String?
+  createdAt  DateTime @default(now())
+}
