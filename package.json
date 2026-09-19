@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "pip3 install -q yt-dlp && npx prisma db push && next build",
+    "build": "curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp && npx prisma db push && next build",
     "start": "next start",
     "postinstall": "prisma generate"
   },
