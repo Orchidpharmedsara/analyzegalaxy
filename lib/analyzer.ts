@@ -5,8 +5,9 @@
 import { GoogleGenAI, createPartFromUri } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
-import type { AnalysisResult, CategoryScore } from './types';
+import type { AnalysisResult, CategoryScore, DropoffPoint, HealthClaim, PolicyFlag, PredictedMetricValue, Prescription } from './types';
 import { prisma } from './db';
+import { STAGE_0_PROMPT, STAGE_1_PROMPT } from './prompts';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -28,51 +29,7 @@ function getClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey: key });
 }
 
-const ANALYSIS_PROMPT = `You are a sharp, honest social media strategist with deep expertise in short-form video performance on Instagram Reels.
 
-You will be given a video to analyze. Your job is to produce a detailed, honest critique explaining what makes this video work — or not work — on social media. Be specific and opinionated. If the video is mediocre or wouldn't perform well, say so clearly and explain why. Avoid generic praise.
-
-IMPORTANT LANGUAGE RULE: You MUST write the ENTIRE JSON response (including all reasons, paragraphs, and suggestions) in Persian (Farsi).
-
-Analyze the video against these 10 categories and score each 1–10:
-
-1. **Hook (first 1–3 seconds)**: Does it stop the scroll? Is there a clear pattern interrupt, question, or visual surprise immediately?
-2. **Pacing & editing**: Cut frequency, rhythm, whether it drags or moves too fast, use of jump cuts/text pop-ons.
-3. **Audio & sound design**: Use of trending audio, voiceover clarity, music/sound effect timing, silence used intentionally or awkwardly.
-4. **Visual quality & style**: Framing, lighting, composition, whether the visual style fits the platform's native feel vs. looking like an ad.
-5. **Caption / on-screen text**: Effectiveness of overlaid text and the written caption — clarity, curiosity gap, hook reinforcement.
-6. **Storytelling / structure**: Is there a clear arc (setup → tension/curiosity → payoff)? Does it earn a rewatch?
-7. **Relatability / shareability**: Would someone tag a friend, save it, or feel "this is so me"? Emotional or practical value.
-8. **Trend & format alignment**: Does it ride a current format, sound, or meme structure — and does it do so in a fresh way, or does it feel derivative?
-9. **Watch-through potential**: Likelihood someone watches to the end given length, pacing, and payoff placement.
-10. **Page Overall View & Engagement**: Evaluate the overall performance EXCLUSIVELY using the provided engagement metrics (Likes, Comments, Views) and Author/Username. Do not guess or make up data. How did the audience actually react based on the raw numbers? Is the engagement rate healthy for a page of this size/type? IMPORTANT: If NO engagement metrics are provided, predict the score based purely on the objective quality and explain in the reason that it is a prediction.
-
-IMPORTANT SCORING RULE: The \`overall_score\` MUST logically reflect the data and USE THE FULL 0-100 SPECTRUM. Do NOT cluster scores around 85-88. Be extremely harsh. If a video is mediocre, give it a 40. If it is terrible, give it a 15. If engagement metrics are provided and they are huge, the score MUST be high (e.g. >85). Do not give a low score to a viral video.
-
-Return ONLY a valid JSON object with this exact structure (no markdown, no explanation outside JSON). ALL VALUES MUST BE IN PERSIAN (FARSI):
-
-{
-  "overall_score": <integer 0-100, heavily influenced by real engagement data, use the full spectrum (e.g. 20, 50, 95) based on actual quality and data>,
-  "overall_score_explanation": "<3-4 sentences in Persian explaining exactly why you chose this specific number, referencing the data and your harsh evaluation criteria>",
-  "category_scores": [
-    {
-      "category": "<category name in Persian>",
-      "score": <integer 1-10>,
-      "reason": "<1-2 sentences in Persian, specific and honest>"
-    }
-  ],
-  "video_summary": "<A complete, scene-by-scene breakdown in Persian. You MUST write out the exact script/dialogue that was spoken in the video, paired directly with a detailed description of what happens visually in each scene. Demonstrate complete understanding of the video.>",
-  "what_worked": "<2-3 sentences in Persian on the video's strongest elements. Be specific — cite actual moments or techniques.>",
-  "why_it_could_work_on_social": "<2-3 sentences in Persian connecting the video's mechanics and engagement metrics to actual platform behavior. If it WOULDN'T work, explain why clearly.>",
-  "narrative_critique": "<3-5 honest paragraphs in Persian. Analyze what actually worked and what didn't. Call out real weaknesses. Don't be flattering. Be the advisor who tells the truth.>",
-  "improvement_suggestions": [
-    "<Specific, actionable suggestion 1 in Persian>",
-    "<Specific, actionable suggestion 2 in Persian>",
-    "<Specific, actionable suggestion 3 in Persian>",
-    "<Specific, actionable suggestion 4 in Persian>",
-    "<Specific, actionable suggestion 5 in Persian>"
-  ]
-}`;
 
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
@@ -240,22 +197,63 @@ export async function analyzeVideo(
   // Upload video to Gemini Files API
   const { uri: videoUri, mimeType } = await uploadVideoToGemini(client, videoPath);
 
-  // Build the prompt with optional context
+  if (options.onProgress) {
+    options.onProgress('استخراج ساختار ویدیو (مرحله ۱ از ۲)...');
+  }
+  
+  // STAGE 0: Structure Extraction
+  console.log('[analyzer] Running Stage 0 (Structure Extraction)...');
+  const stage0Response = await generateWithFallback(client, {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          createPartFromUri(videoUri, mimeType),
+          { text: STAGE_0_PROMPT },
+        ],
+      },
+    ],
+    config: {
+      temperature: 0.2,
+      maxOutputTokens: 2048,
+    }
+  });
+  
+  const stage0Raw = stage0Response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  let stage0Clean = stage0Raw.trim();
+  if (stage0Clean.startsWith('```')) {
+    stage0Clean = stage0Clean.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+  }
+  let stage0Json;
+  try {
+    stage0Json = JSON.parse(stage0Clean);
+  } catch (err) {
+    console.warn('[analyzer] Failed to parse Stage 0 JSON. Proceeding with raw text.');
+    stage0Json = { raw_output: stage0Clean };
+  }
+
+  // STAGE 1: Anchored Scoring
+  if (options.onProgress) {
+    options.onProgress('تحلیل و امتیازدهی (مرحله ۲ از ۲)...');
+  }
+
+  // Build the prompt with Stage 0 output and context
+  let fullPrompt = STAGE_1_PROMPT;
+  fullPrompt += `\n\n=== STAGE 0 STRUCTURE ===\n${JSON.stringify(stage0Json, null, 2)}\n\n`;
+  fullPrompt += `=== OBJECTIVE ===\nreach\n\n`;
+  fullPrompt += `=== PILLAR ===\nother\n\n`;
+
   let contextSection = '';
   if (options.caption || options.hashtags || options.transcript) {
-    contextSection = '\n\nAdditional context about this video:\n';
-    if (options.caption) {
-      contextSection += `Caption: ${options.caption}\n`;
-    }
-    if (options.hashtags) {
-      contextSection += `Hashtags: ${options.hashtags}\n`;
-    }
+    contextSection = '\n\n=== ADDITIONAL CONTEXT ===\n';
+    if (options.caption) contextSection += `Caption: ${options.caption}\n`;
+    if (options.hashtags) contextSection += `Hashtags: ${options.hashtags}\n`;
     if (options.transcript && !options.transcript.includes('[No speech detected]')) {
       contextSection += `Transcript/Voiceover: ${options.transcript}\n`;
     }
     if (options.metadata) {
       const { likeCount, commentCount, viewCount, authorUsername } = options.metadata;
-      contextSection += `\nEngagement Metrics (evaluate these heavily for overall page success):\n`;
+      contextSection += `\nEngagement Metrics:\n`;
       if (authorUsername) contextSection += `- Author/Username: ${authorUsername}\n`;
       if (viewCount !== undefined) contextSection += `- Views: ${viewCount}\n`;
       if (likeCount !== undefined) contextSection += `- Likes: ${likeCount}\n`;
@@ -283,9 +281,9 @@ export async function analyzeVideo(
     console.warn('[analyzer] Failed to fetch training feedback:', err);
   }
 
-  const fullPrompt = ANALYSIS_PROMPT + contextSection;
+  fullPrompt += contextSection;
 
-  console.log('[analyzer] Sending video to Gemini for analysis...');
+  console.log('[analyzer] Sending video to Gemini for Stage 1 analysis...');
 
   const responseStream = await client.models.generateContentStream({
     model: CANDIDATE_MODELS[0], // fallback logic omitted for stream simplicity
@@ -320,17 +318,7 @@ export async function analyzeVideo(
     jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
   }
 
-  let parsed: {
-    overall_score: number;
-    overall_score_explanation: string;
-    category_scores: Array<{ category: string; score: number; reason: string }>;
-    video_summary: string;
-    what_worked: string;
-    why_it_could_work_on_social: string;
-    narrative_critique: string;
-    improvement_suggestions: string[];
-  };
-
+  let parsed: any;
   try {
     parsed = JSON.parse(jsonText);
   } catch {
@@ -339,30 +327,58 @@ export async function analyzeVideo(
     );
   }
 
-  // Validate and normalize
-  const categoryScores: CategoryScore[] = (parsed.category_scores || []).map(
-    (cs) => ({
-      category: String(cs.category || ''),
+  // Map to the new AnalysisResult interface
+  const prediction = parsed.prediction || {};
+  const healthLayer = parsed.health_layer || stage0Json?.health_layer || {};
+  
+  // Build categoryScores with the new structure
+  const categoryScores: CategoryScore[] = (parsed.scores || parsed.category_scores || []).map(
+    (cs: any) => ({
+      key: cs.key || cs.category || '',
+      label_fa: cs.label_fa || cs.category || '',
       score: Math.min(10, Math.max(1, Math.round(Number(cs.score) || 5))),
-      reason: String(cs.reason || ''),
+      confidence: cs.confidence,
+      evidence: cs.evidence || [],
+      counterfactual: cs.counterfactual || '',
+      delta_vs_baseline: cs.delta_vs_baseline || null,
+      predicted_metric: cs.predicted_metric,
+      // Fallbacks for legacy UI components if they still rely on them
+      category: cs.label_fa || cs.category || '',
+      reason: cs.counterfactual || cs.reason || '',
     })
   );
 
-  const overallScore = Math.min(
-    100,
-    Math.max(0, Math.round(Number(parsed.overall_score) || 0))
-  );
-
   return {
-    overallScore,
-    overallScoreExplanation: String(parsed.overall_score_explanation || ''),
+    pds: prediction.pds || parsed.overall_score || null,
+    adjusted_pds: prediction.adjusted_pds || null,
+    binding_gate: prediction.binding_gate || null,
+    percentile_vs_own_account: prediction.percentile_vs_own_account || null,
+    confidence_overall: prediction.confidence_overall || null,
+    
     categoryScores,
-    videoSummary: String(parsed.video_summary || ''),
-    whatWorked: String(parsed.what_worked || ''),
-    whyItCouldWorkOnSocial: String(parsed.why_it_could_work_on_social || ''),
-    narrativeCritique: String(parsed.narrative_critique || ''),
-    improvementSuggestions: Array.isArray(parsed.improvement_suggestions)
-      ? parsed.improvement_suggestions.map(String)
-      : [],
+    prescriptions: parsed.prescriptions || [],
+    predicted_dropoffs: prediction.predicted_dropoff_points || [],
+    predicted_metrics: prediction.predicted_metrics || {},
+
+    health_layer: {
+      claims: healthLayer.claims || [],
+      authority_signals: healthLayer.authority_signals || [],
+      fear_opened: healthLayer.fear_opened || false,
+      fear_resolved: healthLayer.fear_resolved || false,
+      policy_risk_flags: healthLayer.policy_risk_flags || [],
+      disclaimer_present: healthLayer.disclaimer_present || false,
+    },
+    
+    caption_package: parsed.caption_package || null,
+    what_to_check_in_insights: parsed.what_to_check_in_insights || [],
+
+    // Legacy fields for backward compatibility
+    overallScore: prediction.pds || parsed.overall_score || 0,
+    overallScoreExplanation: parsed.overall_score_explanation || (parsed.what_to_check_in_insights ? parsed.what_to_check_in_insights.join('\n') : ''),
+    videoSummary: parsed.video_summary || (stage0Json?.structure ? JSON.stringify(stage0Json.structure.shots) : ''),
+    whatWorked: parsed.what_worked || '',
+    whyItCouldWorkOnSocial: parsed.why_it_could_work_on_social || '',
+    narrativeCritique: parsed.narrative_critique || '',
+    improvementSuggestions: parsed.improvement_suggestions || [],
   };
 }

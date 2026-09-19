@@ -26,8 +26,26 @@ export async function GET(
     return NextResponse.json({
       id: analysis.id,
       videoId: analysis.videoId,
+      
+      // New Social Video Intelligence fields
+      pds: analysis.pds,
+      bindingGate: analysis.bindingGate,
+      bindingGateExplanation: analysis.bindingGateExplanation,
+      prescriptions: JSON.parse(analysis.prescriptions || '[]'),
+      predictedDropoffs: JSON.parse(analysis.predictedDropoffs || '[]'),
+      predictedMetrics: JSON.parse(analysis.predictedMetrics || '{}'),
+      healthClaims: JSON.parse(analysis.healthClaims || '[]'),
+      policyRiskFlags: JSON.parse(analysis.policyRiskFlags || '[]'),
+      fearOpened: analysis.fearOpened,
+      fearResolved: analysis.fearResolved,
+      captionPackage: JSON.parse(analysis.captionPackage || '{}'),
+      insightsChecklist: JSON.parse(analysis.insightsChecklist || '[]'),
+
+      // Legacy fields
       overallScore: analysis.overallScore,
+      overallScoreExplanation: analysis.overallScoreExplanation,
       categoryScores: JSON.parse(analysis.categoryScores ?? '[]'),
+      videoSummary: analysis.videoSummary,
       whatWorked: analysis.whatWorked,
       whyItCouldWorkOnSocial: analysis.whyItCouldWorkOnSocial,
       narrativeCritique: analysis.narrativeCritique,

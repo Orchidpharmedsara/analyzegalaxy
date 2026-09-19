@@ -43,6 +43,7 @@ model Analysis {
   videoId                String   @unique
   video                  Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
   status                 String   @default("COMPLETE") // PENDING, COMPLETE, ERROR
+  // Legacy fields
   overallScore           Int?
   overallScoreExplanation String? // Explanation for the overall score
   categoryScores         String?  // JSON string
@@ -51,6 +52,21 @@ model Analysis {
   whyItCouldWorkOnSocial String?
   narrativeCritique      String?
   improvementSuggestions String?  // JSON string
+
+  // New fields from Social Video Intelligence v0.1 spec
+  pds                    Int?
+  bindingGate            String?
+  bindingGateExplanation String?
+  prescriptions          String?  // JSON string
+  predictedDropoffs      String?  // JSON string
+  predictedMetrics       String?  // JSON string
+  healthClaims           String?  // JSON string
+  policyRiskFlags        String?  // JSON string
+  fearOpened             Boolean?
+  fearResolved           Boolean?
+  captionPackage         String?  // JSON string
+  insightsChecklist      String?  // JSON string
+
   createdAt              DateTime @default(now())
   feedback               Feedback?
 }
