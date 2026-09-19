@@ -33,12 +33,12 @@ Transcript: ${f.analysis.video.transcript || 'None'}`
             role: "model",
             content: JSON.stringify({
               overall_score: f.analysis.overallScore,
-              category_scores: JSON.parse(f.analysis.categoryScores),
+              category_scores: JSON.parse(f.analysis.categoryScores ?? '[]'),
               video_summary: f.analysis.videoSummary,
               what_worked: f.analysis.whatWorked,
               why_it_could_work_on_social: f.analysis.whyItCouldWorkOnSocial,
               narrative_critique: f.analysis.narrativeCritique,
-              improvement_suggestions: JSON.parse(f.analysis.improvementSuggestions)
+              improvement_suggestions: JSON.parse(f.analysis.improvementSuggestions ?? '[]')
             })
           },
           {

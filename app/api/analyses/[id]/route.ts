@@ -27,11 +27,11 @@ export async function GET(
       id: analysis.id,
       videoId: analysis.videoId,
       overallScore: analysis.overallScore,
-      categoryScores: JSON.parse(analysis.categoryScores),
+      categoryScores: JSON.parse(analysis.categoryScores ?? '[]'),
       whatWorked: analysis.whatWorked,
       whyItCouldWorkOnSocial: analysis.whyItCouldWorkOnSocial,
       narrativeCritique: analysis.narrativeCritique,
-      improvementSuggestions: JSON.parse(analysis.improvementSuggestions),
+      improvementSuggestions: JSON.parse(analysis.improvementSuggestions ?? '[]'),
       createdAt: analysis.createdAt.toISOString(),
       video: {
         id: analysis.video.id,

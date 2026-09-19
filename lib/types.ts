@@ -8,6 +8,7 @@ export interface CategoryScore {
 
 export interface AnalysisResult {
   overallScore: number;
+  overallScoreExplanation: string;
   categoryScores: CategoryScore[];
   videoSummary: string;
   whatWorked: string;
@@ -41,6 +42,7 @@ export type AnalysisStatus =
   | 'processing'
   | 'transcribing'
   | 'analyzing'
+  | 'generating'
   | 'saving'
   | 'done'
   | 'error';

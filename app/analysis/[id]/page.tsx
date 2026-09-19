@@ -22,12 +22,12 @@ async function getAnalysis(id: string): Promise<AnalysisRecord | null> {
       videoId: analysis.videoId,
       overallScore: analysis.overallScore,
       overallScoreExplanation: analysis.overallScoreExplanation,
-      categoryScores: JSON.parse(analysis.categoryScores),
+      categoryScores: JSON.parse(analysis.categoryScores ?? '[]'),
       videoSummary: analysis.videoSummary,
       whatWorked: analysis.whatWorked,
       whyItCouldWorkOnSocial: analysis.whyItCouldWorkOnSocial,
       narrativeCritique: analysis.narrativeCritique,
-      improvementSuggestions: JSON.parse(analysis.improvementSuggestions),
+      improvementSuggestions: JSON.parse(analysis.improvementSuggestions ?? '[]'),
       createdAt: analysis.createdAt.toISOString(),
       video: {
         id: analysis.video.id,
@@ -150,7 +150,7 @@ export default async function AnalysisPage({
         {/* Score panel */}
         <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700 space-y-6">
           <div className="flex flex-col items-center gap-2">
-            <ScoreGauge score={analysis.overallScore} size="lg" />
+            <ScoreGauge score={analysis.overallScore ?? 0} size="lg" />
             <p className="text-sm text-gray-500">Overall Score</p>
           </div>
 
@@ -218,7 +218,7 @@ export default async function AnalysisPage({
         <h2 className="text-lg font-semibold mb-4 text-white">
           Category Breakdown
         </h2>
-        <CategoryScores scores={analysis.categoryScores} />
+        <CategoryScores scores={analysis.categoryScores ?? []} />
       </section>
 
       {/* Why it could/wouldn't work */}
@@ -238,7 +238,7 @@ export default async function AnalysisPage({
         </h2>
         <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700">
           <div className="text-gray-300 leading-relaxed text-sm space-y-4 text-right" dir="rtl">
-            {analysis.narrativeCritique.split('\n\n').map((para, i) => (
+            {(analysis.narrativeCritique ?? '').split('\n\n').map((para, i) => (
               <p key={i}>{para}</p>
             ))}
           </div>
@@ -251,7 +251,7 @@ export default async function AnalysisPage({
           How to Improve
         </h2>
         <div className="space-y-3">
-          {analysis.improvementSuggestions.map((suggestion, i) => (
+          {(analysis.improvementSuggestions ?? []).map((suggestion, i) => (
             <div
               key={i}
               className="flex gap-3 bg-gray-900 rounded-xl p-4 border border-gray-700 flex-row-reverse text-right"
