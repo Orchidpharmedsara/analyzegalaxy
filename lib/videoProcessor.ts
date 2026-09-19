@@ -10,13 +10,34 @@ import path from 'path';
 import fs from 'fs';
 import type { VideoMetadata } from './types';
 
-// Use the bundled ffmpeg binary from ffmpeg-static
-if (ffmpegPath) {
-  ffmpeg.setFfmpegPath(ffmpegPath);
+import { execSync } from 'child_process';
+
+// Use the bundled ffmpeg binary from ffmpeg-static, fall back to system ffmpeg
+function resolveFFmpegPath(): string {
+  // If the npm-bundled binary exists and is executable, use it
+  if (ffmpegPath && require('fs').existsSync(ffmpegPath)) {
+    try {
+      execSync(`"${ffmpegPath}" -version`, { stdio: 'ignore' });
+      return ffmpegPath;
+    } catch {}
+  }
+  // Fall back to system ffmpeg (installed via nixpacks on Railway)
+  return 'ffmpeg';
 }
-if (ffprobePath?.path) {
-  ffmpeg.setFfprobePath(ffprobePath.path);
+
+function resolveFFprobePath(): string {
+  const bundled = ffprobePath?.path;
+  if (bundled && require('fs').existsSync(bundled)) {
+    try {
+      execSync(`"${bundled}" -version`, { stdio: 'ignore' });
+      return bundled;
+    } catch {}
+  }
+  return 'ffprobe';
 }
+
+ffmpeg.setFfmpegPath(resolveFFmpegPath());
+ffmpeg.setFfprobePath(resolveFFprobePath());
 
 
 /**
