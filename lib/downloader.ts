@@ -25,7 +25,6 @@ function ensureDir(dir: string) {
 function getYtDlpBinary(): string {
   // Common pip install locations on Mac and Linux
   const candidates = [
-    path.join(process.cwd(), 'yt-dlp'), // Downloaded locally during build phase
     '/usr/local/bin/yt-dlp',
     '/usr/bin/yt-dlp',
     '/opt/homebrew/bin/yt-dlp',
