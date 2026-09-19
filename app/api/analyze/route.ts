@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (!filePath || !fs.existsSync(filePath)) {
+      if (!filePath || !fs.existsSync(/*turbopackIgnore: true*/ filePath)) {
         send({ status: 'error', message: 'Video file not found after download.', error: 'Download failed.' });
         close();
         return;

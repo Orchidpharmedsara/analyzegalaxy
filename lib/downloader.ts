@@ -37,7 +37,7 @@ function getYtDlpBinary(): string {
 
   for (const candidate of candidates) {
     try {
-      if (candidate !== 'yt-dlp' && fs.existsSync(candidate)) {
+      if (candidate !== 'yt-dlp' && fs.existsSync(/*turbopackIgnore: true*/ candidate)) {
         return candidate;
       }
     } catch {
