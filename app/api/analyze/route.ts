@@ -153,13 +153,19 @@ export async function POST(request: NextRequest) {
         console.warn('[api/analyze] Audio transcription failed:', err);
       }
 
-      // Step 3.5: Compress video for AI upload
-      send({ status: 'processing', message: 'Compressing video for ultra-fast AI upload...' });
+      // Step 3.5: Compress video for AI upload ONLY if > 20MB
       let finalVideoPath = filePath;
-      try {
-        finalVideoPath = await compressVideoForAI(filePath, outputDir);
-      } catch (err) {
-        console.warn('[api/analyze] Compression failed, falling back to original:', err);
+      const MAX_UNCOMPRESSED_SIZE = 20 * 1024 * 1024; // 20 MB
+      
+      if (metadata.fileSize && metadata.fileSize > MAX_UNCOMPRESSED_SIZE) {
+        send({ status: 'processing', message: 'Video is large. Compressing for AI upload...' });
+        try {
+          finalVideoPath = await compressVideoForAI(filePath, outputDir);
+        } catch (err) {
+          console.warn('[api/analyze] Compression failed, falling back to original:', err);
+        }
+      } else {
+        console.log(`[api/analyze] Skipping compression. File size is ${(metadata.fileSize! / 1024 / 1024).toFixed(2)}MB`);
       }
 
       // Step 4: Analyze video with Gemini

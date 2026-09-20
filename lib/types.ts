@@ -60,7 +60,11 @@ export interface AnalysisResult {
   experimentValue?: number;
   evidenceConfidence?: number;
 
-  scores?: Record<string, number>;
+  scores?: Record<string, {
+    score: number;
+    reason: string;
+    what_would_be_100: string;
+  }>;
   evidence?: {
     observed: string[];
     calculated: string[];

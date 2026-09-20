@@ -147,13 +147,35 @@ export default async function AnalysisPage({
         <h2 className="text-lg font-semibold mb-4 text-white">
           Category Breakdown
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {Object.entries(analysis.scores || {}).map(([key, score]) => (
-            <div key={key} className="bg-gray-900 rounded-xl p-4 border border-gray-700 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-white mb-1">{score as React.ReactNode}</span>
-              <span className="text-xs text-gray-400 uppercase tracking-wide">{key}</span>
-            </div>
-          ))}
+        <div className="grid md:grid-cols-2 gap-4">
+          {Object.entries(analysis.scores || {}).map(([key, data]: [string, any]) => {
+            const scoreVal = typeof data === 'number' ? data : data.score;
+            const reason = data.reason;
+            const what_would_be_100 = data.what_would_be_100;
+
+            return (
+              <div key={key} className="bg-gray-900 rounded-xl p-5 border border-gray-700 flex flex-col justify-between">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm text-gray-400 uppercase tracking-wide font-semibold">{key}</span>
+                  <span className="text-2xl font-bold text-white">{scoreVal}</span>
+                </div>
+                
+                {reason && (
+                  <div className="text-right mt-2" dir="rtl">
+                    <p className="text-xs text-gray-500 mb-1">دلیل این امتیاز:</p>
+                    <p className="text-sm text-gray-300">{reason}</p>
+                  </div>
+                )}
+                
+                {what_would_be_100 && (
+                  <div className="text-right mt-3 bg-blue-900/10 p-3 rounded-lg border border-blue-900/30" dir="rtl">
+                    <p className="text-xs text-blue-400/80 mb-1">چگونه ۱۰۰ می‌شد؟</p>
+                    <p className="text-sm text-blue-200">{what_would_be_100}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -191,6 +213,21 @@ export default async function AnalysisPage({
             ))}
           </div>
         </section>
+      )}
+
+      {/* Raw Transcript */}
+      {video.transcript && (
+        <details className="bg-gray-900 rounded-2xl border border-gray-700 group transition-all">
+          <summary className="p-6 cursor-pointer font-semibold text-white list-none flex justify-between items-center" dir="rtl">
+            متن کامل صدای ویدیو (Transcript)
+            <span className="text-gray-500 group-open:rotate-180 transition-transform" dir="ltr">▼</span>
+          </summary>
+          <div className="px-6 pb-6 pt-2 border-t border-gray-800">
+            <p className="text-gray-300 leading-relaxed text-sm whitespace-pre-line text-right" dir="rtl">
+              {video.transcript}
+            </p>
+          </div>
+        </details>
       )}
 
       {/* Timeline */}

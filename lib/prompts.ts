@@ -83,7 +83,7 @@ STEP 4. Calculate the 4 Overall Metrics (0-100):
    - growth_potential (Attracting new viewers)
    - experiment_value (How useful the video is for learning)
    - evidence_confidence (Based on how much data we actually observed vs guessed)
-STEP 5. Build Timeline. Scene-by-scene analysis.
+STEP 5. Build Timeline. Create a FULL scene-by-scene analysis. Do NOT skip any part of the video. You MUST include the full audio transcript for each scene.
 STEP 6. Identify Top Strengths and Weaknesses.
 STEP 7. Identify Risk Points (retention drop-offs, dead seconds).
 STEP 8. Generate Experiments. Turn diagnoses into actionable A/B tests with variables, control, variant, and hypothesis.
@@ -103,16 +103,20 @@ SCHEMA
     "evidence_confidence": 78
   },
   "scores": {
-    "hook": 91,
-    "retention": 68,
-    "shareability": 91,
-    "story": 84,
-    "emotion": 79,
-    "clarity": 94,
-    "rewatchability": 76,
-    "originality": 82,
-    "platform_fit": 90,
-    "audio": 73
+    "hook": {
+      "score": 91,
+      "reason": "The hook immediately creates visual tension within the first 1.5s.",
+      "what_would_be_100": "If the visual tension was accompanied by an auditory pattern break."
+    },
+    "retention": { "score": 68, "reason": "...", "what_would_be_100": "..." },
+    "shareability": { "score": 91, "reason": "...", "what_would_be_100": "..." },
+    "story": { "score": 84, "reason": "...", "what_would_be_100": "..." },
+    "emotion": { "score": 79, "reason": "...", "what_would_be_100": "..." },
+    "clarity": { "score": 94, "reason": "...", "what_would_be_100": "..." },
+    "rewatchability": { "score": 76, "reason": "...", "what_would_be_100": "..." },
+    "originality": { "score": 82, "reason": "...", "what_would_be_100": "..." },
+    "platform_fit": { "score": 90, "reason": "...", "what_would_be_100": "..." },
+    "audio": { "score": 73, "reason": "...", "what_would_be_100": "..." }
   },
   "evidence": {
     "observed": ["Video duration is 18 seconds", "..."],
