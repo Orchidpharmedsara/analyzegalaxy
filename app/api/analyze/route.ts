@@ -211,29 +211,27 @@ export async function POST(request: NextRequest) {
       const analysis = await prisma.analysis.create({
         data: {
           videoId: video.id,
-          pds: analysisResult.pds,
-          bindingGate: analysisResult.binding_gate,
-          prescriptions: JSON.stringify(analysisResult.prescriptions || []),
-          predictedDropoffs: JSON.stringify(analysisResult.predicted_dropoffs || []),
-          predictedMetrics: JSON.stringify(analysisResult.predicted_metrics || {}),
-          healthClaims: JSON.stringify(analysisResult.health_layer?.claims || []),
-          policyRiskFlags: JSON.stringify(analysisResult.health_layer?.policy_risk_flags || []),
-          fearOpened: analysisResult.health_layer?.fear_opened || false,
-          fearResolved: analysisResult.health_layer?.fear_resolved || false,
-          captionPackage: JSON.stringify(analysisResult.caption_package || {}),
-          insightsChecklist: JSON.stringify(analysisResult.what_to_check_in_insights || []),
+          performancePotential: analysisResult.performancePotential,
+          growthPotential: analysisResult.growthPotential,
+          experimentValue: analysisResult.experimentValue,
+          evidenceConfidence: analysisResult.evidenceConfidence,
+
+          scores: JSON.stringify(analysisResult.scores || {}),
+          evidence: JSON.stringify(analysisResult.evidence || {}),
+          timeline: JSON.stringify(analysisResult.timeline || []),
+          strengths: JSON.stringify(analysisResult.strengths || []),
+          weaknesses: JSON.stringify(analysisResult.weaknesses || []),
+          riskPoints: JSON.stringify(analysisResult.riskPoints || []),
+          experiments: JSON.stringify(analysisResult.experiments || []),
 
           // Legacy fields
           overallScore: analysisResult.overallScore,
           overallScoreExplanation: analysisResult.overallScoreExplanation,
-          categoryScores: JSON.stringify(analysisResult.categoryScores),
           videoSummary: analysisResult.videoSummary,
           whatWorked: analysisResult.whatWorked,
           whyItCouldWorkOnSocial: analysisResult.whyItCouldWorkOnSocial,
           narrativeCritique: analysisResult.narrativeCritique,
-          improvementSuggestions: JSON.stringify(
-            analysisResult.improvementSuggestions
-          ),
+          improvementSuggestions: JSON.stringify(analysisResult.improvementSuggestions || []),
         },
       });
 

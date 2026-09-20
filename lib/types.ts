@@ -55,35 +55,24 @@ export interface CategoryScore {
 }
 
 export interface AnalysisResult {
-  pds?: number;
-  adjusted_pds?: number;
-  binding_gate?: string;
-  percentile_vs_own_account?: number | null;
-  confidence_overall?: number;
+  performancePotential?: number;
+  growthPotential?: number;
+  experimentValue?: number;
+  evidenceConfidence?: number;
 
-  categoryScores: CategoryScore[];
-  prescriptions?: Prescription[];
-  predicted_dropoffs?: DropoffPoint[];
-  predicted_metrics?: Record<string, PredictedMetricValue>;
-
-  health_layer?: {
-    claims: HealthClaim[];
-    authority_signals: string[];
-    fear_opened: boolean;
-    fear_resolved: boolean;
-    policy_risk_flags: PolicyFlag[];
-    disclaimer_present: boolean;
+  scores?: Record<string, number>;
+  evidence?: {
+    observed: string[];
+    calculated: string[];
+    predicted: string[];
+    inferred: string[];
+    unknown: string[];
   };
-  
-  caption_package?: {
-    first_line_options: string[];
-    full_caption: string;
-    search_keywords: string[];
-    cta: { type: string; text_fa: string };
-    onscreen_text_fixes: { timestamp: number; current: string; suggested: string; reason: string }[];
-  };
-
-  what_to_check_in_insights?: string[];
+  timeline?: any[];
+  strengths?: string[];
+  weaknesses?: string[];
+  riskPoints?: any[];
+  experiments?: any[];
 
   // Legacy fields
   overallScore?: number;
@@ -158,28 +147,29 @@ export interface AnalysisRecord {
   id: string;
   videoId: string;
   status?: string;
-  pds?: number | null;
-  bindingGate?: string | null;
-  bindingGateExplanation?: string | null;
-  prescriptions?: Prescription[] | null;
-  predictedDropoffs?: DropoffPoint[] | null;
-  predictedMetrics?: Record<string, PredictedMetricValue> | null;
-  healthClaims?: HealthClaim[] | null;
-  policyRiskFlags?: PolicyFlag[] | null;
-  fearOpened?: boolean | null;
-  fearResolved?: boolean | null;
-  captionPackage?: any | null;
-  insightsChecklist?: string[] | null;
+
+  performancePotential?: number | null;
+  growthPotential?: number | null;
+  experimentValue?: number | null;
+  evidenceConfidence?: number | null;
+
+  scores?: string | null;
+  evidence?: string | null;
+  timeline?: string | null;
+  strengths?: string | null;
+  weaknesses?: string | null;
+  riskPoints?: string | null;
+  experiments?: string | null;
 
   // Legacy
   overallScore?: number | null;
   overallScoreExplanation?: string | null;
-  categoryScores?: CategoryScore[] | null;
+  categoryScores?: string | null;
   videoSummary?: string | null;
   whatWorked?: string | null;
   whyItCouldWorkOnSocial?: string | null;
   narrativeCritique?: string | null;
-  improvementSuggestions?: string[] | null;
+  improvementSuggestions?: string | null;
   createdAt: string;
   video: VideoRecord;
 }

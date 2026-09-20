@@ -53,19 +53,19 @@ model Analysis {
   narrativeCritique      String?
   improvementSuggestions String?  // JSON string
 
-  // New fields from Social Video Intelligence v0.1 spec
-  pds                    Int?
-  bindingGate            String?
-  bindingGateExplanation String?
-  prescriptions          String?  // JSON string
-  predictedDropoffs      String?  // JSON string
-  predictedMetrics       String?  // JSON string
-  healthClaims           String?  // JSON string
-  policyRiskFlags        String?  // JSON string
-  fearOpened             Boolean?
-  fearResolved           Boolean?
-  captionPackage         String?  // JSON string
-  insightsChecklist      String?  // JSON string
+  // New fields from Social Video Intelligence v1.0 spec
+  performancePotential   Int?
+  growthPotential        Int?
+  experimentValue        Int?
+  evidenceConfidence     Int?
+  
+  scores                 String?  // JSON string
+  evidence               String?  // JSON string
+  timeline               String?  // JSON string
+  strengths              String?  // JSON string
+  weaknesses             String?  // JSON string
+  riskPoints             String?  // JSON string
+  experiments            String?  // JSON string
 
   createdAt              DateTime @default(now())
   feedback               Feedback?

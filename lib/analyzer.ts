@@ -328,57 +328,29 @@ export async function analyzeVideo(
   }
 
   // Map to the new AnalysisResult interface
-  const prediction = parsed.prediction || {};
-  const healthLayer = parsed.health_layer || stage0Json?.health_layer || {};
-  
-  // Build categoryScores with the new structure
-  const categoryScores: CategoryScore[] = (parsed.scores || parsed.category_scores || []).map(
-    (cs: any) => ({
-      key: cs.key || cs.category || '',
-      label_fa: cs.label_fa || cs.category || '',
-      score: Math.min(10, Math.max(1, Math.round(Number(cs.score) || 5))),
-      confidence: cs.confidence,
-      evidence: cs.evidence || [],
-      counterfactual: cs.counterfactual || '',
-      delta_vs_baseline: cs.delta_vs_baseline || null,
-      predicted_metric: cs.predicted_metric,
-      // Fallbacks for legacy UI components if they still rely on them
-      category: cs.label_fa || cs.category || '',
-      reason: cs.counterfactual || cs.reason || '',
-    })
-  );
+  const overall = parsed.overall || {};
 
   return {
-    pds: prediction.pds || parsed.overall_score || null,
-    adjusted_pds: prediction.adjusted_pds || null,
-    binding_gate: prediction.binding_gate || null,
-    percentile_vs_own_account: prediction.percentile_vs_own_account || null,
-    confidence_overall: prediction.confidence_overall || null,
+    performancePotential: overall.performance_potential || null,
+    growthPotential: overall.growth_potential || null,
+    experimentValue: overall.experiment_value || null,
+    evidenceConfidence: overall.evidence_confidence || null,
     
-    categoryScores,
-    prescriptions: parsed.prescriptions || [],
-    predicted_dropoffs: prediction.predicted_dropoff_points || [],
-    predicted_metrics: prediction.predicted_metrics || {},
-
-    health_layer: {
-      claims: healthLayer.claims || [],
-      authority_signals: healthLayer.authority_signals || [],
-      fear_opened: healthLayer.fear_opened || false,
-      fear_resolved: healthLayer.fear_resolved || false,
-      policy_risk_flags: healthLayer.policy_risk_flags || [],
-      disclaimer_present: healthLayer.disclaimer_present || false,
-    },
-    
-    caption_package: parsed.caption_package || null,
-    what_to_check_in_insights: parsed.what_to_check_in_insights || [],
+    scores: parsed.scores || {},
+    evidence: parsed.evidence || { observed: [], calculated: [], predicted: [], inferred: [], unknown: [] },
+    timeline: parsed.timeline || [],
+    strengths: parsed.strengths || [],
+    weaknesses: parsed.weaknesses || [],
+    riskPoints: parsed.risk_points || [],
+    experiments: parsed.experiments || [],
 
     // Legacy fields for backward compatibility
-    overallScore: prediction.pds || parsed.overall_score || 0,
-    overallScoreExplanation: parsed.overall_score_explanation || (parsed.what_to_check_in_insights ? parsed.what_to_check_in_insights.join('\n') : ''),
-    videoSummary: parsed.video_summary || (stage0Json?.structure ? JSON.stringify(stage0Json.structure.shots) : ''),
-    whatWorked: parsed.what_worked || '',
-    whyItCouldWorkOnSocial: parsed.why_it_could_work_on_social || '',
-    narrativeCritique: parsed.narrative_critique || '',
-    improvementSuggestions: parsed.improvement_suggestions || [],
+    overallScore: overall.performance_potential || 0,
+    overallScoreExplanation: '',
+    videoSummary: stage0Json?.structure ? JSON.stringify(stage0Json.structure.shots) : '',
+    whatWorked: '',
+    whyItCouldWorkOnSocial: '',
+    narrativeCritique: '',
+    improvementSuggestions: [],
   };
 }
