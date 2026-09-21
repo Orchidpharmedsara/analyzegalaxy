@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import type { AnalysisResult, CategoryScore, DropoffPoint, HealthClaim, PolicyFlag, PredictedMetricValue, Prescription } from './types';
 import { prisma } from './db';
-import { STAGE_0_PROMPT, STAGE_1_PROMPT } from './prompts';
+import { STAGE_0_PROMPT, STAGE_1_PROMPT, NODE_A_OBSERVER_PROMPT, NODE_B_SKEPTIC_PROMPT, NODE_C_COACH_PROMPT } from './prompts';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -352,5 +352,73 @@ export async function analyzeVideo(
     whyItCouldWorkOnSocial: '',
     narrativeCritique: '',
     improvementSuggestions: [],
+  };
+}
+
+/**
+ * 3-Step AI Chain Analysis
+ * Bypasses heavy video upload by using an image grid and transcript.
+ */
+export async function analyzeVideo3StepChain(
+  imageGridPath: string,
+  options: {
+    transcript: string;
+    baseline: any; // InstagramBaseline
+    onProgress?: (text: string) => void;
+  }
+) {
+  const client = getClient();
+  const imageData = fs.readFileSync(imageGridPath).toString('base64');
+  
+  if (options.onProgress) options.onProgress('استخراج داده‌های عینی (مرحله ۱ از ۳)...');
+  
+  // NODE A: The Observer
+  console.log('[analyzer] Running Node A (Observer)...');
+  const nodeAResponse = await generateWithFallback(client, {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: imageData } },
+          { text: `Transcript:\n${options.transcript}\n\n${NODE_A_OBSERVER_PROMPT}` }
+        ]
+      }
+    ],
+    config: { temperature: 0.2, responseMimeType: 'application/json' }
+  });
+  
+  const nodeAText = nodeAResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const nodeAJson = JSON.parse(nodeAText);
+
+  if (options.onProgress) options.onProgress('نقد الگوریتم (مرحله ۲ از ۳)...');
+  
+  // NODE B: The Skeptic
+  console.log('[analyzer] Running Node B (Skeptic)...');
+  const nodeBPrompt = `${NODE_B_SKEPTIC_PROMPT}\n\n=== OBJECTIVE DATA ===\n${JSON.stringify(nodeAJson, null, 2)}\n\n=== ACCOUNT BASELINE ===\n${JSON.stringify(options.baseline, null, 2)}`;
+  const nodeBResponse = await generateWithFallback(client, {
+    contents: [{ role: 'user', parts: [{ text: nodeBPrompt }] }],
+    config: { temperature: 0.5, responseMimeType: 'application/json' }
+  });
+  
+  const nodeBText = nodeBResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const nodeBJson = JSON.parse(nodeBText);
+
+  if (options.onProgress) options.onProgress('تدوین گزارش مربی (مرحله ۳ از ۳)...');
+  
+  // NODE C: The Coach
+  console.log('[analyzer] Running Node C (Coach)...');
+  const nodeCPrompt = `${NODE_C_COACH_PROMPT}\n\n=== ALGORITHM CRITIQUE ===\n${JSON.stringify(nodeBJson, null, 2)}`;
+  const nodeCResponse = await generateWithFallback(client, {
+    contents: [{ role: 'user', parts: [{ text: nodeCPrompt }] }],
+    config: { temperature: 0.7, responseMimeType: 'application/json' }
+  });
+  
+  const nodeCText = nodeCResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  const nodeCJson = JSON.parse(nodeCText);
+
+  return {
+    nodeA: nodeAJson,
+    nodeB: nodeBJson,
+    nodeC: nodeCJson,
   };
 }

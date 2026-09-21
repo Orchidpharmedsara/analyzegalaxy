@@ -187,3 +187,33 @@ export async function compressVideoForAI(
       .run();
   });
 }
+
+/**
+ * Generate an image grid (tile) extracting one frame every 2 seconds.
+ * Returns the generated image grid file path.
+ */
+export async function generateImageGrid(
+  filePath: string,
+  outputDir: string
+): Promise<string> {
+  const gridPath = path.join(outputDir, 'grid.jpg');
+
+  if (fs.existsSync(gridPath)) {
+    return gridPath;
+  }
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(filePath)
+      .outputOptions([
+        '-frames', '1',          // Only output 1 file
+        '-q:v', '2',             // High quality for jpeg
+        '-vf', 'fps=1/2,scale=320:-1,tile=6x6' // 1 frame every 2s, width 320, 6x6 grid
+      ])
+      .output(gridPath)
+      .on('end', () => resolve(gridPath))
+      .on('error', (err, stdout, stderr) =>
+        reject(new Error(`Grid generation failed: ${err.message}\nStderr: ${stderr}`))
+      )
+      .run();
+  });
+}

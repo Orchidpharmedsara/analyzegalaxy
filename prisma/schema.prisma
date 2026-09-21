@@ -59,6 +59,11 @@ model Analysis {
   experimentValue        Int?
   evidenceConfidence     Int?
   
+  // Ground Truth tracking
+  predictedVerdict       String?
+  actualReach            Int?
+  actualSends            Int?
+
   scores                 String?  // JSON string
   evidence               String?  // JSON string
   timeline               String?  // JSON string

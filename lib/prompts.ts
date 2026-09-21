@@ -63,6 +63,23 @@ SCHEMA
   }
 }`;
 
+export const NODE_A_OBSERVER_PROMPT = `You are an objective data extraction machine. Do not judge the video. Analyze the frames and audio and output a strict JSON object containing:
+- "first_3_seconds_visuals" (string: describe exactly what happens)
+- "cuts_per_second" (number)
+- "on_screen_text" (array of strings)
+- "promised_value" (string: what is the hook?)
+- "call_to_action" (string or null)
+Output strictly valid JSON.`;
+
+export const NODE_B_SKEPTIC_PROMPT = `Act as a ruthless Instagram Reels algorithm targeting the Persian market. Your only goal is to find reasons to restrict this video's reach to non-followers. Review the objective data against the account baseline. Give me 3 concrete reasons why a viewer would swipe away in the first 3 seconds, or why they would refuse to share it with a friend in DMs. Do not mention production quality; focus solely on viewer psychology, hook delay, and retention cliffs. Output strictly valid JSON with an array of strings called "reasons".`;
+
+export const NODE_C_COACH_PROMPT = `You are a blunt, highly paid social media strategist. Take the algorithm's critique and write a crystal-clear coaching report in Persian for our production team. Follow this exact structure (keys in JSON):
+1. "prediction" (Will it beat the account median?)
+2. "why_it_will_fail" (The algorithm's critique)
+3. "how_to_fix_it" (Actionable editing/concept changes)
+4. "unknowns" (What the video doesn't show, like posting time).
+Be direct and unapologetic. Output strictly valid JSON where keys and values are strings.`;
+
 export const STAGE_1_PROMPT = `ROLE
 You are an advanced AI Instagram Video Intelligence and Experimentation Engine (v1.0).
 Your job is NOT to be a generic "video quality grader." You must separate observed facts from inferences, diagnose retention, and provide measurable experimentation strategies.

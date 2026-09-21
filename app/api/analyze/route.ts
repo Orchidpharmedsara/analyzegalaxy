@@ -11,8 +11,9 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import { downloadFromUrl, saveUploadedFile } from '@/lib/downloader';
-import { extractMetadata, generateThumbnail, extractAudio, compressVideoForAI } from '@/lib/videoProcessor';
-import { analyzeVideo, transcribeAudio } from '@/lib/analyzer';
+import { extractMetadata, generateThumbnail, extractAudio, compressVideoForAI, generateImageGrid } from '@/lib/videoProcessor';
+import { analyzeVideo, transcribeAudio, analyzeVideo3StepChain } from '@/lib/analyzer';
+import { getInstagramBaseline } from '@/lib/scraper';
 import { prisma } from '@/lib/db';
 import type { ProgressEvent, AnalysisStatus } from '@/lib/types';
 
@@ -134,14 +135,25 @@ export async function POST(request: NextRequest) {
         return;
       }
 
-      // Step 2: Extract metadata + thumbnail
-      send({ status: 'processing', message: 'Extracting video metadata...' });
+      // Step 2: Extract metadata + thumbnail + image grid
+      send({ status: 'processing', message: 'Extracting video metadata and image grid...' });
       const outputDir = path.dirname(filePath);
 
-      const [metadata, thumbnailPath] = await Promise.all([
+      const [metadata, thumbnailPath, gridPath] = await Promise.all([
         extractMetadata(filePath),
         generateThumbnail(filePath, outputDir).catch(() => null),
+        generateImageGrid(filePath, outputDir).catch((e) => {
+          console.error("Grid generation failed:", e);
+          return null;
+        }),
       ]);
+      
+      // Step 2.5: Get Context Baseline
+      let baseline: any = { followerCount: null, bio: null, medianViewsLast10: null };
+      if (extractedMetadata.authorUsername) {
+         send({ status: 'processing', message: 'Fetching Instagram baseline...' });
+         baseline = await getInstagramBaseline(extractedMetadata.authorUsername);
+      }
 
       // Step 3: Extract + transcribe audio
       send({ status: 'transcribing', message: 'Transcribing audio...' });
@@ -153,30 +165,17 @@ export async function POST(request: NextRequest) {
         console.warn('[api/analyze] Audio transcription failed:', err);
       }
 
-      // Step 3.5: Compress video for AI upload ONLY if > 20MB
-      let finalVideoPath = filePath;
-      const MAX_UNCOMPRESSED_SIZE = 20 * 1024 * 1024; // 20 MB
-      
-      if (metadata.fileSize && metadata.fileSize > MAX_UNCOMPRESSED_SIZE) {
-        send({ status: 'processing', message: 'Video is large. Compressing for AI upload...' });
-        try {
-          finalVideoPath = await compressVideoForAI(filePath, outputDir);
-        } catch (err) {
-          console.warn('[api/analyze] Compression failed, falling back to original:', err);
-        }
-      } else {
-        console.log(`[api/analyze] Skipping compression. File size is ${(metadata.fileSize! / 1024 / 1024).toFixed(2)}MB`);
+      if (!gridPath) {
+        throw new Error('Image grid generation failed. Cannot proceed with analysis.');
       }
 
-      // Step 4: Analyze video with Gemini
-      send({ status: 'analyzing', message: 'Analyzing with Gemini AI (this takes 10–20 seconds)...' });
-      const analysisResult = await analyzeVideo(finalVideoPath, {
-        caption,
-        hashtags,
+      // Step 4: Analyze video with Gemini 3-Step Chain
+      send({ status: 'analyzing', message: 'Running 3-Step AI Chain...' });
+      const analysisResult = await analyzeVideo3StepChain(gridPath, {
         transcript,
-        metadata: extractedMetadata,
+        baseline,
         onProgress: (text) => {
-          send({ status: 'generating', message: 'Writing analysis...', rawText: text });
+          send({ status: 'generating', message: 'Analyzing...', rawText: text });
         }
       });
 
@@ -217,27 +216,18 @@ export async function POST(request: NextRequest) {
       const analysis = await prisma.analysis.create({
         data: {
           videoId: video.id,
-          performancePotential: analysisResult.performancePotential,
-          growthPotential: analysisResult.growthPotential,
-          experimentValue: analysisResult.experimentValue,
-          evidenceConfidence: analysisResult.evidenceConfidence,
+          predictedVerdict: analysisResult.nodeC?.prediction || null,
 
-          scores: JSON.stringify(analysisResult.scores || {}),
-          evidence: JSON.stringify(analysisResult.evidence || {}),
-          timeline: JSON.stringify(analysisResult.timeline || []),
-          strengths: JSON.stringify(analysisResult.strengths || []),
-          weaknesses: JSON.stringify(analysisResult.weaknesses || []),
-          riskPoints: JSON.stringify(analysisResult.riskPoints || []),
-          experiments: JSON.stringify(analysisResult.experiments || []),
-
-          // Legacy fields
-          overallScore: analysisResult.overallScore,
-          overallScoreExplanation: analysisResult.overallScoreExplanation,
-          videoSummary: analysisResult.videoSummary,
-          whatWorked: analysisResult.whatWorked,
-          whyItCouldWorkOnSocial: analysisResult.whyItCouldWorkOnSocial,
-          narrativeCritique: analysisResult.narrativeCritique,
-          improvementSuggestions: JSON.stringify(analysisResult.improvementSuggestions || []),
+          // Store JSON objects as strings in existing fields to maintain DB compatibility
+          scores: JSON.stringify(analysisResult.nodeA || {}),
+          evidence: JSON.stringify(analysisResult.nodeB || {}),
+          timeline: JSON.stringify(analysisResult.nodeC || {}),
+          strengths: '[]',
+          weaknesses: '[]',
+          riskPoints: '[]',
+          experiments: '[]',
+          improvementSuggestions: '[]',
+          videoSummary: '',
         },
       });
 
