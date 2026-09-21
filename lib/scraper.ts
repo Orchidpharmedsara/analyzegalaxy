@@ -7,7 +7,11 @@ export interface InstagramBaseline {
 }
 
 export async function getInstagramBaseline(username: string): Promise<InstagramBaseline> {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ 
+    headless: true,
+    executablePath: process.env.NODE_ENV === 'production' ? 'chromium' : undefined,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   });
