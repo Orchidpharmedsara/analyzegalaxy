@@ -1,4 +1,4 @@
-import { chromium } from 'playwright-core';
+import { chromium } from 'playwright';
 
 export interface InstagramBaseline {
   followerCount: number | null;
@@ -9,7 +9,6 @@ export interface InstagramBaseline {
 export async function getInstagramBaseline(username: string): Promise<InstagramBaseline> {
   const browser = await chromium.launch({ 
     headless: true,
-    executablePath: process.env.NODE_ENV === 'production' ? 'chromium' : undefined,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   const context = await browser.newContext({

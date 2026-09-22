@@ -68,7 +68,11 @@ export async function extractMetadata(filePath: string): Promise<VideoMetadata> 
       if (videoStream.r_frame_rate) {
         const parts = videoStream.r_frame_rate.split('/');
         if (parts.length === 2) {
-          fps = Math.round((parseInt(parts[0]) / parseInt(parts[1])) * 100) / 100;
+          const num = parseInt(parts[0]);
+          const den = parseInt(parts[1]);
+          if (den !== 0 && !isNaN(num) && !isNaN(den)) {
+            fps = Math.round((num / den) * 100) / 100;
+          }
         }
       }
 
@@ -207,6 +211,7 @@ export async function generateImageGrid(
       .outputOptions([
         '-frames', '1',          // Only output 1 file
         '-q:v', '2',             // High quality for jpeg
+        '-update', '1',          // Tell ffmpeg to overwrite single file
         '-vf', 'fps=1/2,scale=320:-1,tile=6x6' // 1 frame every 2s, width 320, 6x6 grid
       ])
       .output(gridPath)

@@ -387,8 +387,16 @@ export async function analyzeVideo3StepChain(
     config: { temperature: 0.2, responseMimeType: 'application/json' }
   });
   
+  const cleanJson = (text: string) => {
+    let clean = text.trim();
+    if (clean.startsWith('```')) {
+      clean = clean.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    return clean;
+  };
+
   const nodeAText = nodeAResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const nodeAJson = JSON.parse(nodeAText);
+  const nodeAJson = JSON.parse(cleanJson(nodeAText));
 
   if (options.onProgress) options.onProgress('نقد الگوریتم (مرحله ۲ از ۳)...');
   
@@ -401,7 +409,7 @@ export async function analyzeVideo3StepChain(
   });
   
   const nodeBText = nodeBResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const nodeBJson = JSON.parse(nodeBText);
+  const nodeBJson = JSON.parse(cleanJson(nodeBText));
 
   if (options.onProgress) options.onProgress('تدوین گزارش مربی (مرحله ۳ از ۳)...');
   
@@ -414,7 +422,7 @@ export async function analyzeVideo3StepChain(
   });
   
   const nodeCText = nodeCResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  const nodeCJson = JSON.parse(nodeCText);
+  const nodeCJson = JSON.parse(cleanJson(nodeCText));
 
   return {
     nodeA: nodeAJson,
