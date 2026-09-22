@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import ScoreGauge from '@/components/ScoreGauge';
 import VideoPlayer from '@/components/VideoPlayer';
 import FeedbackForm from '@/components/FeedbackForm';
 import { prisma } from '@/lib/db';
@@ -47,6 +46,11 @@ export default async function AnalysisPage({
   if (!analysis) notFound();
 
   const { video } = analysis;
+  
+  // Use the parsed JSON from the db
+  const nodeA = analysis.scores || {};
+  const nodeB = analysis.evidence || {};
+  const nodeC = analysis.timeline || {};
 
   return (
     <div className="space-y-8">
@@ -67,7 +71,7 @@ export default async function AnalysisPage({
         </Link>
       </div>
 
-      {/* Header: video + overall scores */}
+      {/* Header: video metadata */}
       <div className="grid md:grid-cols-2 gap-6 items-start">
         {/* Video player */}
         <div>
@@ -79,11 +83,11 @@ export default async function AnalysisPage({
 
           {/* Video metadata */}
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-            {video.duration && (
+            {video.duration != null && (
               <span>⏱ {formatDuration(video.duration)}</span>
             )}
             {video.resolution && <span>📐 {video.resolution}</span>}
-            {video.fps && <span>🎥 {video.fps}fps</span>}
+            {video.fps != null && <span>🎥 {video.fps}fps</span>}
             {video.aspectRatio && <span>↔ {video.aspectRatio}</span>}
             <span>
               {video.sourceType === 'instagram' ? '📸 Instagram' : '📁 Uploaded'}
@@ -111,109 +115,122 @@ export default async function AnalysisPage({
           )}
         </div>
 
-        {/* Score panel */}
+        {/* Prediction Panel */}
         <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col items-center gap-2">
-              <ScoreGauge score={analysis.performancePotential ?? 0} size="md" />
-              <p className="text-xs text-gray-400 font-semibold tracking-wide uppercase text-center">
-                Performance Potential
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <ScoreGauge score={analysis.growthPotential ?? 0} size="md" />
-              <p className="text-xs text-gray-400 font-semibold tracking-wide uppercase text-center">
-                Growth Potential
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <ScoreGauge score={analysis.experimentValue ?? 0} size="md" />
-              <p className="text-xs text-gray-400 font-semibold tracking-wide uppercase text-center">
-                Experiment Value
-              </p>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <ScoreGauge score={analysis.evidenceConfidence ?? 0} size="md" />
-              <p className="text-xs text-gray-400 font-semibold tracking-wide uppercase text-center">
-                Evidence Confidence
-              </p>
-            </div>
+          <h2 className="text-xl font-bold text-white text-right" dir="rtl">
+            پیش‌بینی مربی (Coach Prediction)
+          </h2>
+          <div className="bg-indigo-900/20 p-5 rounded-xl border border-indigo-900/50 text-right" dir="rtl">
+            <p className="text-lg text-indigo-300 font-medium leading-relaxed">
+              {nodeC.prediction || 'در حال تحلیل...'}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Category Breakdown */}
-      <section>
-        <h2 className="text-lg font-semibold mb-4 text-white">
-          Category Breakdown
-        </h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          {Object.entries(analysis.scores || {}).map(([key, data]: [string, any]) => {
-            const scoreVal = typeof data === 'number' ? data : data.score;
-            const reason = data.reason;
-            const what_would_be_100 = data.what_would_be_100;
-
-            return (
-              <div key={key} className="bg-gray-900 rounded-xl p-5 border border-gray-700 flex flex-col justify-between">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm text-gray-400 uppercase tracking-wide font-semibold">{key}</span>
-                  <span className="text-2xl font-bold text-white">{scoreVal}</span>
-                </div>
-                
-                {reason && (
-                  <div className="text-right mt-2" dir="rtl">
-                    <p className="text-xs text-gray-500 mb-1">دلیل این امتیاز:</p>
-                    <p className="text-sm text-gray-300">{reason}</p>
-                  </div>
-                )}
-                
-                {what_would_be_100 && (
-                  <div className="text-right mt-3 bg-blue-900/10 p-3 rounded-lg border border-blue-900/30" dir="rtl">
-                    <p className="text-xs text-blue-400/80 mb-1">چگونه ۱۰۰ می‌شد؟</p>
-                    <p className="text-sm text-blue-200">{what_would_be_100}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Strengths and Weaknesses */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <section className="bg-green-900/10 rounded-2xl p-6 border border-green-900/30">
-          <h2 className="text-lg font-semibold mb-4 text-green-400">Strengths</h2>
-          <ul className="list-disc list-inside space-y-2 text-gray-300 text-sm text-right" dir="rtl">
-            {(analysis.strengths || []).map((s: string, i: number) => <li key={i}>{s}</li>)}
-          </ul>
-        </section>
+      {/* 3-Step AI Chain Analysis */}
+      <div className="space-y-6">
+        
+        {/* Node B: The Skeptic (Critique) */}
         <section className="bg-red-900/10 rounded-2xl p-6 border border-red-900/30">
-          <h2 className="text-lg font-semibold mb-4 text-red-400">Weaknesses</h2>
-          <ul className="list-disc list-inside space-y-2 text-gray-300 text-sm text-right" dir="rtl">
-            {(analysis.weaknesses || []).map((w: string, i: number) => <li key={i}>{w}</li>)}
-          </ul>
-        </section>
-      </div>
-
-      {/* Risk Points */}
-      {analysis.riskPoints && analysis.riskPoints.length > 0 && (
-        <section className="bg-orange-900/10 rounded-2xl p-6 border border-orange-900/30">
-          <h2 className="text-lg font-semibold mb-4 text-orange-400">Risk Points (Drop-offs & Dead Seconds)</h2>
-          <div className="space-y-4 text-right" dir="rtl">
-            {analysis.riskPoints.map((rp: any, i: number) => (
-              <div key={i} className="border-b border-gray-800 pb-4 last:border-0">
-                <div className="flex gap-3 justify-end items-center mb-2">
-                  <span className="text-orange-300 font-semibold">{rp.timestamp}s</span>
-                  {rp.duration && <span className="text-gray-500 text-xs">({rp.duration}s duration)</span>}
-                  <span className="bg-orange-900/40 text-orange-400 text-xs px-2 py-1 rounded">Severity: {rp.severity}</span>
+          <h2 className="text-xl font-bold mb-4 text-red-400 text-right" dir="rtl">
+            نقد الگوریتم (The Skeptic)
+          </h2>
+          <p className="text-sm text-red-300/80 mb-4 text-right" dir="rtl">
+            دلایلی که باعث می‌شود کاربر ویدیو را رد کند (Swipe away):
+          </p>
+          <div className="space-y-3 text-right" dir="rtl">
+            {Array.isArray(nodeB.reasons) ? (
+              nodeB.reasons.map((reason: string, i: number) => (
+                <div key={i} className="flex gap-3 justify-start flex-row-reverse bg-red-900/20 p-4 rounded-lg">
+                  <span className="text-red-500 font-bold">✖</span>
+                  <p className="text-red-200 text-sm leading-relaxed">{reason}</p>
                 </div>
-                <p className="text-sm text-gray-300 mb-2">{rp.reason}</p>
-                <p className="text-sm text-blue-300 bg-blue-900/20 p-2 rounded">پبشنهاد: {rp.suggested_edit}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-gray-500">نظری یافت نشد.</p>
+            )}
           </div>
         </section>
-      )}
+
+        {/* Node C: The Coach (Actionable Advice) */}
+        <section className="bg-blue-900/10 rounded-2xl p-6 border border-blue-900/30">
+          <h2 className="text-xl font-bold mb-4 text-blue-400 text-right" dir="rtl">
+            توصیه مربی (The Coach)
+          </h2>
+          <div className="space-y-4 text-right" dir="rtl">
+            {nodeC.why_it_will_fail && (
+              <div className="bg-gray-800/50 p-5 rounded-xl border border-gray-700">
+                <h3 className="text-sm font-semibold text-gray-400 mb-2">چرا این ویدیو ممکن است شکست بخورد؟</h3>
+                <p className="text-gray-300 text-sm leading-relaxed">{nodeC.why_it_will_fail}</p>
+              </div>
+            )}
+            
+            {nodeC.how_to_fix_it && (
+              <div className="bg-green-900/20 p-5 rounded-xl border border-green-900/40">
+                <h3 className="text-sm font-semibold text-green-400 mb-2">چگونه آن را اصلاح کنیم؟ (Actionable Fix)</h3>
+                <p className="text-green-200 text-sm leading-relaxed">{nodeC.how_to_fix_it}</p>
+              </div>
+            )}
+
+            {nodeC.unknowns && (
+              <div className="bg-gray-800/50 p-5 rounded-xl border border-gray-700">
+                <h3 className="text-sm font-semibold text-gray-400 mb-2">مجهولات (مسائلی که مشخص نیست)</h3>
+                <p className="text-gray-400 text-sm leading-relaxed italic">{nodeC.unknowns}</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Node A: The Observer (Objective Data) */}
+        <section className="bg-gray-900 rounded-2xl p-6 border border-gray-700">
+          <h2 className="text-xl font-bold mb-4 text-white text-right" dir="rtl">
+            داده‌های عینی (The Observer)
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4 text-right" dir="rtl">
+            {nodeA.first_3_seconds_visuals && (
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 mb-1">۳ ثانیه اول (بصری)</p>
+                <p className="text-sm text-gray-200">{nodeA.first_3_seconds_visuals}</p>
+              </div>
+            )}
+            
+            {nodeA.promised_value && (
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 mb-1">ارزش وعده داده شده (Hook)</p>
+                <p className="text-sm text-gray-200">{nodeA.promised_value}</p>
+              </div>
+            )}
+
+            {nodeA.cuts_per_second != null && (
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 mb-1">سرعت کات (Cuts per second)</p>
+                <p className="text-lg font-bold text-gray-200">{nodeA.cuts_per_second}</p>
+              </div>
+            )}
+
+            {nodeA.call_to_action && (
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 mb-1">دعوت به اقدام (CTA)</p>
+                <p className="text-sm text-gray-200">{nodeA.call_to_action}</p>
+              </div>
+            )}
+          </div>
+          
+          {Array.isArray(nodeA.on_screen_text) && nodeA.on_screen_text.length > 0 && (
+            <div className="mt-4 bg-gray-800 rounded-xl p-4 text-right" dir="rtl">
+              <p className="text-xs text-gray-500 mb-2">متن‌های روی تصویر</p>
+              <div className="flex flex-wrap gap-2 justify-end">
+                {nodeA.on_screen_text.map((text: string, i: number) => (
+                  <span key={i} className="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded">
+                    {text}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
 
       {/* Raw Transcript */}
       {video.transcript && (
@@ -226,92 +243,6 @@ export default async function AnalysisPage({
             <p className="text-gray-300 leading-relaxed text-sm whitespace-pre-line text-right" dir="rtl">
               {video.transcript}
             </p>
-          </div>
-        </details>
-      )}
-
-      {/* Timeline */}
-      {analysis.timeline && analysis.timeline.length > 0 && (
-        <section className="bg-gray-900 rounded-2xl p-6 border border-gray-700">
-          <h2 className="text-lg font-semibold mb-4 text-white">Scene-by-Scene Timeline</h2>
-          <div className="space-y-4 text-right" dir="rtl">
-            {analysis.timeline.map((scene: any, i: number) => (
-              <div key={i} className="border-l-2 border-gray-800 pr-4 pb-4 last:pb-0 relative">
-                <div className="absolute right-[-9px] top-1 w-4 h-4 rounded-full bg-gray-700 border-2 border-gray-900"></div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-gray-400 font-mono text-sm">{scene.start_time}s - {scene.end_time}s</span>
-                  {scene.retention_risk_score > 7 && <span className="text-red-400 text-xs">⚠️ خطر ریزش بالا</span>}
-                </div>
-                <p className="text-sm text-gray-300 mb-1"><span className="text-gray-500">صحنه:</span> {scene.visual_description}</p>
-                <p className="text-sm text-gray-300 mb-1"><span className="text-gray-500">صدا:</span> {scene.audio_description}</p>
-                <p className="text-sm text-gray-300 mb-1"><span className="text-gray-500">متن:</span> {scene.transcript}</p>
-                <p className="text-sm text-gray-300 mb-2"><span className="text-gray-500">هدف:</span> {scene.scene_function}</p>
-                {scene.edit_recommendation && (
-                  <p className="text-sm text-blue-300 bg-blue-900/20 p-2 rounded">{scene.edit_recommendation}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Experiments */}
-      {analysis.experiments && analysis.experiments.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold mb-4 text-white">Recommended Experiments</h2>
-          <div className="space-y-4">
-            {analysis.experiments.map((exp: any, i: number) => (
-              <div key={i} className="bg-indigo-900/20 border border-indigo-900/50 rounded-2xl p-5">
-                <div className="flex justify-between items-start mb-3 border-b border-indigo-900/50 pb-3">
-                  <div className="text-right flex-1" dir="rtl">
-                    <span className="font-bold text-indigo-400 text-sm bg-indigo-900/40 px-2 py-1 rounded ml-2">
-                      آزمایش {i + 1}: {exp.variable}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-3 text-right" dir="rtl">
-                  <p className="text-sm text-gray-300 mb-2"><span className="text-gray-500">فرضیه:</span> {exp.hypothesis}</p>
-                  <p className="text-sm text-gray-300 mb-1"><span className="text-red-400 font-medium">نسخه فعلی (Control):</span> {exp.control}</p>
-                  <p className="text-sm text-gray-300 mb-3"><span className="text-green-400 font-medium">نسخه جدید (Variant):</span> {exp.variant}</p>
-                  <div className="flex gap-3 text-xs justify-end">
-                    <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded">Primary Metric: {exp.primary_metric}</span>
-                    <span className="bg-gray-800 text-gray-400 px-2 py-1 rounded">Secondary: {exp.secondary_metric}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Evidence */}
-      {analysis.evidence && (
-        <details className="bg-gray-900 rounded-2xl border border-gray-700 group transition-all">
-          <summary className="p-6 cursor-pointer font-semibold text-white list-none flex justify-between items-center" dir="rtl">
-            داده‌های تحلیل شده (Evidence)
-            <span className="text-gray-500 group-open:rotate-180 transition-transform" dir="ltr">▼</span>
-          </summary>
-          <div className="px-6 pb-6 pt-2 border-t border-gray-800">
-            <div className="space-y-4 text-right" dir="rtl">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-1">داده‌های قطعی (Observed)</h4>
-                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
-                  {(analysis.evidence.observed || []).map((e: string, i: number) => <li key={i}>{e}</li>)}
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-1">استنتاج‌ها (Inferred)</h4>
-                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
-                  {(analysis.evidence.inferred || []).map((e: string, i: number) => <li key={i}>{e}</li>)}
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-1">داده‌های ناشناخته (Unknown)</h4>
-                <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
-                  {(analysis.evidence.unknown || []).map((e: string, i: number) => <li key={i}>{e}</li>)}
-                </ul>
-              </div>
-            </div>
           </div>
         </details>
       )}
